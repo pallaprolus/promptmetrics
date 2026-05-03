@@ -63,3 +63,8 @@ def test_list_prompt_ids(storage):
     storage.insert_trace(make_trace(prompt_id="b"))
     storage.insert_trace(make_trace(prompt_id="a"))
     assert storage.list_prompt_ids() == ["a", "b"]
+
+
+def test_storage_uses_wal_mode(storage):
+    mode = storage._conn.execute("PRAGMA journal_mode").fetchone()[0]
+    assert mode.lower() == "wal"

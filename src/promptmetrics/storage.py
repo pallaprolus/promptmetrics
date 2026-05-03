@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -64,13 +65,23 @@ class Storage:
     def __init__(self, db_path: Path | str | None = None) -> None:
         self.db_path = Path(db_path) if db_path is not None else DEFAULT_DB_PATH
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        self._conn = sqlite3.connect(
+            self.db_path, check_same_thread=False, timeout=5.0
+        )
         self._conn.row_factory = sqlite3.Row
+        # WAL lets readers and writers coexist without blocking each other;
+        # synchronous=NORMAL is the standard pairing for app-level workloads.
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA synchronous=NORMAL")
         with self._conn:
             self._conn.executescript(SCHEMA)
+        # sqlite3.Connection is not safe for concurrent use even with
+        # check_same_thread=False — serialise access at the Python level.
+        self._lock = threading.Lock()
 
     def close(self) -> None:
-        self._conn.close()
+        with self._lock:
+            self._conn.close()
 
     def __enter__(self) -> "Storage":
         return self
@@ -81,30 +92,31 @@ class Storage:
     # --- traces ---------------------------------------------------------
 
     def insert_trace(self, trace: Trace) -> int:
-        cur = self._conn.execute(
-            """
-            INSERT INTO traces (
-                prompt_id, input, output, latency_ms,
-                input_tokens, output_tokens, model, timestamp,
-                loop_id, step_index
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                trace.prompt_id,
-                trace.input,
-                trace.output,
-                trace.latency_ms,
-                trace.input_tokens,
-                trace.output_tokens,
-                trace.model,
-                _to_iso(trace.timestamp),
-                trace.loop_id,
-                trace.step_index,
-            ),
-        )
-        self._conn.commit()
-        trace.id = cur.lastrowid
-        return cur.lastrowid
+        with self._lock:
+            cur = self._conn.execute(
+                """
+                INSERT INTO traces (
+                    prompt_id, input, output, latency_ms,
+                    input_tokens, output_tokens, model, timestamp,
+                    loop_id, step_index
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    trace.prompt_id,
+                    trace.input,
+                    trace.output,
+                    trace.latency_ms,
+                    trace.input_tokens,
+                    trace.output_tokens,
+                    trace.model,
+                    _to_iso(trace.timestamp),
+                    trace.loop_id,
+                    trace.step_index,
+                ),
+            )
+            self._conn.commit()
+            trace.id = cur.lastrowid
+            return cur.lastrowid
 
     def get_traces(
         self,
@@ -125,19 +137,21 @@ class Storage:
         if limit is not None:
             query += " LIMIT ?"
             params.append(limit)
-        rows = self._conn.execute(query, params).fetchall()
+        with self._lock:
+            rows = self._conn.execute(query, params).fetchall()
         return [_row_to_trace(r) for r in rows]
 
     def list_prompt_ids(self) -> list[str]:
-        rows = self._conn.execute(
-            "SELECT DISTINCT prompt_id FROM traces ORDER BY prompt_id"
-        ).fetchall()
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT DISTINCT prompt_id FROM traces ORDER BY prompt_id"
+            ).fetchall()
         return [r["prompt_id"] for r in rows]
 
     # --- baselines ------------------------------------------------------
 
     def save_baseline(self, baseline: Baseline) -> int:
-        with self._conn:
+        with self._lock, self._conn:
             self._conn.execute(
                 "UPDATE baselines SET is_active = 0 WHERE prompt_id = ?",
                 (baseline.prompt_id,),
@@ -166,19 +180,20 @@ class Storage:
                     _to_iso(baseline.created_at),
                 ),
             )
-        baseline.id = cur.lastrowid
-        baseline.is_active = True
-        return cur.lastrowid
+            baseline.id = cur.lastrowid
+            baseline.is_active = True
+            return cur.lastrowid
 
     def get_active_baseline(self, prompt_id: str) -> Baseline | None:
-        row = self._conn.execute(
-            """
-            SELECT * FROM baselines
-            WHERE prompt_id = ? AND is_active = 1
-            ORDER BY created_at DESC LIMIT 1
-            """,
-            (prompt_id,),
-        ).fetchone()
+        with self._lock:
+            row = self._conn.execute(
+                """
+                SELECT * FROM baselines
+                WHERE prompt_id = ? AND is_active = 1
+                ORDER BY created_at DESC LIMIT 1
+                """,
+                (prompt_id,),
+            ).fetchone()
         return _row_to_baseline(row) if row else None
 
 
