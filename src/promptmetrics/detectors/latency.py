@@ -12,10 +12,19 @@ from promptmetrics.models import Baseline, DriftResult, DriftType, Severity
 DEFAULT_P95_RATIO_WARNING = 1.15
 DEFAULT_P95_RATIO_DRIFTED = 1.30
 # KS p-values: lower means the two distributions look more different.
+# 0.05 / 0.01 are conventional alpha levels — at p<0.01 we're 99%
+# confident the distributions differ; at p<0.05, 95%. Tighten via the
+# ks_p_* kwargs if false alarms are expensive in your workflow.
 DEFAULT_KS_P_WARNING = 0.05
 DEFAULT_KS_P_DRIFTED = 0.01
 
-MIN_SAMPLE_SIZE = 5
+# A KS test with only a few samples on either side has very low power.
+# The recent floor is intentionally low (5) so a sparse production
+# window still gets *some* signal; the baseline floor matches the
+# 30-sample default of capture_baseline so you never compare against a
+# baseline summarised from a handful of points.
+MIN_RECENT_SAMPLES = 5
+MIN_BASELINE_SAMPLES = 30
 
 
 def detect_latency_drift(
@@ -28,7 +37,8 @@ def detect_latency_drift(
     ks_p_drifted: float = DEFAULT_KS_P_DRIFTED,
 ) -> DriftResult:
     recent = np.asarray(list(recent_latencies), dtype=float)
-    if recent.size < MIN_SAMPLE_SIZE or len(baseline.latency_samples) < MIN_SAMPLE_SIZE:
+    baseline_n = len(baseline.latency_samples)
+    if recent.size < MIN_RECENT_SAMPLES or baseline_n < MIN_BASELINE_SAMPLES:
         return DriftResult(
             drift_type=DriftType.LATENCY,
             severity=Severity.OK,
@@ -36,12 +46,12 @@ def detect_latency_drift(
             threshold=p95_ratio_drifted,
             detail=(
                 f"insufficient samples (recent={recent.size}, "
-                f"baseline={len(baseline.latency_samples)}); "
-                f"need >= {MIN_SAMPLE_SIZE}"
+                f"baseline={baseline_n}); need recent >= "
+                f"{MIN_RECENT_SAMPLES} and baseline >= {MIN_BASELINE_SAMPLES}"
             ),
             metrics={
                 "recent_n": float(recent.size),
-                "baseline_n": float(len(baseline.latency_samples)),
+                "baseline_n": float(baseline_n),
             },
         )
 

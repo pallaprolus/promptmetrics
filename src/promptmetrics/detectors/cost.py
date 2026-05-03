@@ -8,7 +8,8 @@ from promptmetrics.models import Baseline, DriftResult, DriftType, Severity
 
 DEFAULT_TOKEN_RATIO_WARNING = 1.15
 DEFAULT_TOKEN_RATIO_DRIFTED = 1.30
-MIN_SAMPLE_SIZE = 5
+MIN_RECENT_SAMPLES = 5
+MIN_BASELINE_SAMPLES = 30
 
 
 def detect_cost_drift(
@@ -19,14 +20,24 @@ def detect_cost_drift(
     ratio_drifted: float = DEFAULT_TOKEN_RATIO_DRIFTED,
 ) -> DriftResult:
     recent = np.asarray(list(recent_total_tokens), dtype=float)
-    if recent.size < MIN_SAMPLE_SIZE:
+    if (
+        recent.size < MIN_RECENT_SAMPLES
+        or baseline.sample_size < MIN_BASELINE_SAMPLES
+    ):
         return DriftResult(
             drift_type=DriftType.COST,
             severity=Severity.OK,
             score=0.0,
             threshold=ratio_drifted,
-            detail=f"insufficient samples (recent={recent.size}); need >= {MIN_SAMPLE_SIZE}",
-            metrics={"recent_n": float(recent.size)},
+            detail=(
+                f"insufficient samples (recent={recent.size}, "
+                f"baseline={baseline.sample_size}); need recent >= "
+                f"{MIN_RECENT_SAMPLES} and baseline >= {MIN_BASELINE_SAMPLES}"
+            ),
+            metrics={
+                "recent_n": float(recent.size),
+                "baseline_n": float(baseline.sample_size),
+            },
         )
 
     recent_mean = float(recent.mean())

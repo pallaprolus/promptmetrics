@@ -85,3 +85,22 @@ def test_cost_handles_zero_baseline():
     base = _baseline([200.0] * 50, total_tokens_mean=0.0)
     res = detect_cost_drift([10, 20, 30, 40, 50], base)
     assert res.severity == Severity.OK
+
+
+def test_latency_insufficient_baseline_samples_returns_ok():
+    # A baseline with only 10 samples is too small for a reliable KS test
+    # even when recent has plenty of data.
+    rng = np.random.default_rng(10)
+    base = rng.normal(200, 30, size=10).tolist()
+    recent = rng.normal(400, 60, size=100).tolist()
+    res = detect_latency_drift(recent, _baseline(base))
+    assert res.severity == Severity.OK
+    assert "baseline=10" in res.detail
+
+
+def test_cost_insufficient_baseline_samples_returns_ok():
+    base = _baseline([200.0] * 50, total_tokens_mean=100.0)
+    base.sample_size = 10  # simulate a baseline captured from too few traces
+    res = detect_cost_drift([200, 210, 220, 190, 205, 215], base)
+    assert res.severity == Severity.OK
+    assert "baseline=10" in res.detail
