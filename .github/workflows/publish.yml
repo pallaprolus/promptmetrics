@@ -1,0 +1,88 @@
+name: Publish to PyPI
+
+# Triggered by pushing a tag matching v*.*.* (e.g. v0.1.0).
+# The job uses PyPI Trusted Publishing (OIDC), so no API token
+# secrets need to be stored in the repo.
+#
+# Prerequisite: configure a Trusted Publisher on PyPI for this
+# project pointing at:
+#   owner: pallaprolus
+#   repo:  promptmetrics
+#   workflow filename: publish.yml
+#   environment: pypi
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install package + dev deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Run pytest
+        run: pytest
+
+  build:
+    name: Build sdist + wheel
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify tag matches package version
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          pkg_version=$(python -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          if [ "$tag_version" != "$pkg_version" ]; then
+            echo "Tag version ($tag_version) does not match pyproject.toml version ($pkg_version)" >&2
+            exit 1
+          fi
+      - name: Build distributions
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    # The "pypi" environment is also the one configured as a Trusted
+    # Publisher on PyPI. It can hold required reviewers if you want a
+    # manual approval gate before each release.
+    environment:
+      name: pypi
+      url: https://pypi.org/p/promptmetrics
+    permissions:
+      # OIDC token exchange with PyPI requires id-token: write.
+      # No PYPI_API_TOKEN secret is used or needed.
+      id-token: write
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
