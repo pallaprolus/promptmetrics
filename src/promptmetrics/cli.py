@@ -8,7 +8,12 @@ from rich.console import Console
 from rich.table import Table
 
 from promptmetrics import __version__
-from promptmetrics.core import InsufficientDataError, PromptMetrics
+from promptmetrics.core import (
+    DEFAULT_MAX_BASELINE_AGE_DAYS,
+    InsufficientDataError,
+    PromptMetrics,
+    StaleBaselineError,
+)
 from promptmetrics.models import DriftReport, Severity
 
 app = typer.Typer(
@@ -72,13 +77,25 @@ def baseline(
 def check(
     prompt_id: Annotated[str, typer.Argument(help="Prompt identifier.")],
     window: Annotated[int, typer.Option("--window", help="Hours of recent traces to compare.")] = 24,
+    max_baseline_age_days: Annotated[
+        int,
+        typer.Option(
+            "--max-baseline-age-days",
+            help="Reject baselines older than this. Set to 0 to disable.",
+        ),
+    ] = DEFAULT_MAX_BASELINE_AGE_DAYS,
     db: DbOption = None,
 ) -> None:
     """Compare the recent window to the active baseline."""
+    age_limit = max_baseline_age_days if max_baseline_age_days > 0 else None
     with PromptMetrics(db) as pd:
         try:
-            report = pd.check_drift(prompt_id, window_hours=window)
-        except InsufficientDataError as e:
+            report = pd.check_drift(
+                prompt_id,
+                window_hours=window,
+                max_baseline_age_days=age_limit,
+            )
+        except (InsufficientDataError, StaleBaselineError) as e:
             console.print(f"[red]error:[/red] {e}")
             raise typer.Exit(code=2)
 

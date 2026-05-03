@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 import numpy as np
 import pytest
 
-from promptmetrics.core import InsufficientDataError
+from promptmetrics.core import InsufficientDataError, StaleBaselineError
 from promptmetrics.models import Severity
 from tests.conftest import seed_normal_traces
 
@@ -89,3 +91,40 @@ def test_check_drift_flags_cost_regression(pd_instance):
 def test_check_drift_without_baseline_errors(pd_instance):
     with pytest.raises(InsufficientDataError):
         pd_instance.check_drift("missing")
+
+
+def test_check_drift_rejects_stale_baseline(pd_instance):
+    seed_normal_traces(pd_instance.storage, n=200, seed=7)
+    baseline = pd_instance.capture_baseline("p1", window_hours=24)
+    # Backdate the baseline 60 days
+    pd_instance.storage._conn.execute(
+        "UPDATE baselines SET created_at = ? WHERE id = ?",
+        (
+            (datetime.now(timezone.utc) - timedelta(days=60)).isoformat(),
+            baseline.id,
+        ),
+    )
+    pd_instance.storage._conn.commit()
+
+    with pytest.raises(StaleBaselineError, match="60.0 days old"):
+        pd_instance.check_drift("p1", max_baseline_age_days=30)
+
+
+def test_check_drift_skips_staleness_when_disabled(pd_instance):
+    seed_normal_traces(
+        pd_instance.storage, n=200, age_minutes_back=180, seed=8
+    )
+    baseline = pd_instance.capture_baseline("p1", window_hours=24)
+    pd_instance.storage._conn.execute(
+        "UPDATE baselines SET created_at = ? WHERE id = ?",
+        (
+            (datetime.now(timezone.utc) - timedelta(days=60)).isoformat(),
+            baseline.id,
+        ),
+    )
+    pd_instance.storage._conn.commit()
+    seed_normal_traces(pd_instance.storage, n=60, seed=9)
+
+    # max_baseline_age_days=None disables the check
+    report = pd_instance.check_drift("p1", max_baseline_age_days=None)
+    assert report.severity in {Severity.OK, Severity.WARNING, Severity.DRIFTED}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -11,6 +12,13 @@ from promptmetrics.storage import Storage, window_since
 
 class InsufficientDataError(RuntimeError):
     pass
+
+
+class StaleBaselineError(RuntimeError):
+    pass
+
+
+DEFAULT_MAX_BASELINE_AGE_DAYS = 30
 
 
 class PromptMetrics:
@@ -57,6 +65,7 @@ class PromptMetrics:
         self,
         prompt_id: str,
         window_hours: int = 24,
+        max_baseline_age_days: int | None = DEFAULT_MAX_BASELINE_AGE_DAYS,
     ) -> DriftReport:
         baseline = self.storage.get_active_baseline(prompt_id)
         if baseline is None:
@@ -64,6 +73,17 @@ class PromptMetrics:
                 f"no active baseline for prompt_id={prompt_id!r}; "
                 f"run capture_baseline first"
             )
+        if max_baseline_age_days is not None:
+            age_days = (
+                datetime.now(timezone.utc) - baseline.created_at
+            ).total_seconds() / 86400
+            if age_days > max_baseline_age_days:
+                raise StaleBaselineError(
+                    f"baseline for {prompt_id!r} is {age_days:.1f} days old "
+                    f"(> max_baseline_age_days={max_baseline_age_days}); "
+                    f"re-run capture_baseline, or pass "
+                    f"max_baseline_age_days=None to disable the check"
+                )
         traces = self.storage.get_traces(
             prompt_id, since=window_since(window_hours)
         )

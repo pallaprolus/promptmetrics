@@ -1,4 +1,8 @@
-from promptmetrics.core import PromptMetrics
+from promptmetrics.core import (
+    InsufficientDataError,
+    PromptMetrics,
+    StaleBaselineError,
+)
 from promptmetrics.decorator import track
 from promptmetrics.models import (
     Baseline,
@@ -20,5 +24,7 @@ __all__ = [
     "DriftResult",
     "DriftType",
     "Severity",
+    "InsufficientDataError",
+    "StaleBaselineError",
     "__version__",
 ]
