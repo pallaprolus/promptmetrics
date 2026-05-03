@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "promptmetrics"
-version = "0.1.0"
+version = "0.1.1"
 description = "Production radar for LLM apps — capture a baseline, detect when latency, cost, or behavior drifts."
 readme = "README.md"
 license = { file = "LICENSE" }
