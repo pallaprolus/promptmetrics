@@ -97,6 +97,39 @@ def rag_query(question: str): ...
 
 OpenAI- and Anthropic-style `usage` objects are detected automatically.
 
+## Sensitive data: prompts and outputs are stored verbatim
+
+By default, `@track` writes the full input and output of every call to the local SQLite database. If your prompts contain PII, secrets, customer data, or anything you wouldn't want sitting in `~/.promptmetrics/` indefinitely, scrub it with the `redact_input` / `redact_output` hooks:
+
+```python
+import re
+from promptmetrics import track
+
+EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
+SSN = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
+
+def scrub(text: str) -> str:
+    text = EMAIL.sub("[EMAIL]", text)
+    text = SSN.sub("[SSN]", text)
+    return text
+
+@track("support_reply", redact_input=scrub, redact_output=scrub)
+def reply(customer_message: str): ...
+```
+
+The redactor runs before the trace is written, so the raw values never touch disk. If your redactor raises, the trace is recorded with an empty string and the error is logged — pass `raise_on_error=True` to fail loudly instead.
+
+The DB is a plain SQLite file at `~/.promptmetrics/promptmetrics.db` (override with `PromptMetrics(db_path=...)` or `--db`). Treat it like any other file with sensitive data: back it up, encrypt the volume, or delete it on a schedule.
+
+## Strict mode for CI
+
+```python
+@track("nightly_eval", raise_on_error=True)
+def eval_run(): ...
+```
+
+By default the decorator never raises — observability shouldn't break production. In CI or eval pipelines where silent metric corruption is worse than a crash, set `raise_on_error=True` so extractor, redactor, and storage failures all surface as exceptions.
+
 ## What's deliberately out of scope (for v0.1)
 
 - Slack / Discord / PagerDuty alerting

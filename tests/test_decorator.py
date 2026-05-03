@@ -152,6 +152,51 @@ def test_track_raises_on_extractor_error_when_strict(storage):
     assert storage.get_traces("hello") == []
 
 
+def test_track_redacts_input_before_storage(storage):
+    set_storage(storage)
+
+    @track("hello", redact_input=lambda s: s.replace("secret", "[REDACTED]"))
+    def call(prompt: str) -> str:
+        return "ok"
+
+    call("here is a secret token")
+    rows = storage.get_traces("hello")
+    assert "[REDACTED]" in rows[0].input
+    assert "secret" not in rows[0].input
+
+
+def test_track_redacts_output_before_storage(storage):
+    set_storage(storage)
+
+    @track(
+        "hello",
+        redact_output=lambda s: s.replace("api_key=ABC", "api_key=[REDACTED]"),
+    )
+    def call() -> str:
+        return "response containing api_key=ABC123"
+
+    call()
+    rows = storage.get_traces("hello")
+    assert "[REDACTED]" in rows[0].output
+    assert "ABC123" not in rows[0].output
+
+
+def test_track_redactor_failure_propagates_in_strict_mode(storage):
+    set_storage(storage)
+
+    @track("hello", redact_input=lambda s: 1 / 0, raise_on_error=True)
+    def call(prompt: str) -> str:
+        return "ok"
+
+    try:
+        call("hi")
+    except ZeroDivisionError:
+        pass
+    else:
+        raise AssertionError("expected ZeroDivisionError to propagate")
+    assert storage.get_traces("hello") == []
+
+
 def test_track_uses_custom_extractors(storage):
     set_storage(storage)
 

@@ -95,9 +95,16 @@ def track(
     model: str | None = None,
     extract_output: Callable[[Any], str] | None = None,
     extract_tokens: Callable[[Any], tuple[int, int]] | None = None,
+    redact_input: Callable[[str], str] | None = None,
+    redact_output: Callable[[str], str] | None = None,
     raise_on_error: bool = False,
 ) -> Callable[[F], F]:
     """Capture latency, tokens, input, and output for the wrapped call.
+
+    Inputs and outputs are stored verbatim by default. Pass ``redact_input``
+    and/or ``redact_output`` (``Callable[[str], str]``) to scrub PII or
+    secrets before they hit the database — for example
+    ``redact_input=lambda s: re.sub(r'\\b\\d{3}-\\d{2}-\\d{4}\\b', '[SSN]', s)``.
 
     By default, extractor and storage failures are logged and swallowed so
     observability never breaks the host application. Pass
@@ -116,10 +123,20 @@ def track(
                 in_tok, out_tok = _extract_token_counts(
                     result, extract_tokens, raise_on_error
                 )
+                input_str = _coerce_input(args, kwargs)
+                output_str = _extract_output(result, extract_output, raise_on_error)
+                if redact_input is not None:
+                    input_str = _apply_redactor(
+                        redact_input, input_str, "input", raise_on_error
+                    )
+                if redact_output is not None:
+                    output_str = _apply_redactor(
+                        redact_output, output_str, "output", raise_on_error
+                    )
                 trace = Trace(
                     prompt_id=prompt_id,
-                    input=_coerce_input(args, kwargs),
-                    output=_extract_output(result, extract_output, raise_on_error),
+                    input=input_str,
+                    output=output_str,
                     latency_ms=latency_ms,
                     input_tokens=in_tok,
                     output_tokens=out_tok,
@@ -135,3 +152,18 @@ def track(
         return wrapper  # type: ignore[return-value]
 
     return decorator
+
+
+def _apply_redactor(
+    redactor: Callable[[str], str],
+    value: str,
+    field: str,
+    raise_on_error: bool,
+) -> str:
+    try:
+        return str(redactor(value))
+    except Exception:
+        if raise_on_error:
+            raise
+        logger.exception("%s redactor raised; recording empty string", field)
+        return ""
