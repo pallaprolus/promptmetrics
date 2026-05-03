@@ -4,16 +4,16 @@ from pathlib import Path
 
 import numpy as np
 
-from promptdrift.detectors import detect_cost_drift, detect_latency_drift
-from promptdrift.models import Baseline, DriftReport, Trace
-from promptdrift.storage import Storage, window_since
+from llmradar.detectors import detect_cost_drift, detect_latency_drift
+from llmradar.models import Baseline, DriftReport, Trace
+from llmradar.storage import Storage, window_since
 
 
 class InsufficientDataError(RuntimeError):
     pass
 
 
-class PromptDrift:
+class LLMRadar:
     """High-level facade combining storage + detectors."""
 
     def __init__(self, db_path: Path | str | None = None) -> None:
@@ -22,7 +22,7 @@ class PromptDrift:
     def close(self) -> None:
         self.storage.close()
 
-    def __enter__(self) -> "PromptDrift":
+    def __enter__(self) -> "LLMRadar":
         return self
 
     def __exit__(self, *exc: object) -> None:

@@ -3,13 +3,13 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "promptdrift"
+name = "llmradar"
 version = "0.1.0"
-description = "Lightweight drift detection for LLM apps in production"
+description = "Production radar for LLM apps — capture a baseline, detect when latency, cost, or behavior drifts."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
-authors = [{ name = "promptdrift contributors" }]
+authors = [{ name = "llmradar contributors" }]
 keywords = ["llm", "observability", "drift", "monitoring", "openai", "anthropic"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -37,14 +37,14 @@ dev = [
 ]
 
 [project.scripts]
-promptdrift = "promptdrift.cli:app"
+llmradar = "llmradar.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/pallaprolus/promptdrift"
-Issues = "https://github.com/pallaprolus/promptdrift/issues"
+Homepage = "https://github.com/pallaprolus/llmradar"
+Issues = "https://github.com/pallaprolus/llmradar/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/promptdrift"]
+packages = ["src/llmradar"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

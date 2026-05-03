@@ -5,9 +5,9 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pytest
 
-from promptdrift.core import PromptDrift
-from promptdrift.models import Trace
-from promptdrift.storage import Storage
+from llmradar.core import LLMRadar
+from llmradar.models import Trace
+from llmradar.storage import Storage
 
 
 @pytest.fixture
@@ -24,7 +24,7 @@ def storage(db_path):
 
 @pytest.fixture
 def pd_instance(db_path):
-    p = PromptDrift(db_path)
+    p = LLMRadar(db_path)
     yield p
     p.close()
 

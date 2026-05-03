@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from promptdrift import track
-from promptdrift.decorator import set_storage
+from llmradar import track
+from llmradar.decorator import set_storage
 
 
 def test_track_records_trace(storage):

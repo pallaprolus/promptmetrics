@@ -2,8 +2,8 @@
 
 Run:
     python demo.py
-    promptdrift baseline demo --db ./demo.db --window 24
-    promptdrift check demo --db ./demo.db --window 1
+    llmradar baseline demo --db ./demo.db --window 24
+    llmradar check demo --db ./demo.db --window 1
 """
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ from pathlib import Path
 
 import numpy as np
 
-from promptdrift.models import Trace
-from promptdrift.storage import Storage
+from llmradar.models import Trace
+from llmradar.storage import Storage
 
 DB_PATH = Path("./demo.db")
 PROMPT_ID = "demo"
@@ -67,8 +67,8 @@ def main() -> None:
     storage.close()
     print(f"seeded {DB_PATH} with 300 healthy + 60 drifted traces for prompt_id={PROMPT_ID!r}")
     print("\nnext steps:")
-    print(f"  promptdrift baseline {PROMPT_ID} --db {DB_PATH} --window 24 --min-samples 100")
-    print(f"  promptdrift check    {PROMPT_ID} --db {DB_PATH} --window 1")
+    print(f"  llmradar baseline {PROMPT_ID} --db {DB_PATH} --window 24 --min-samples 100")
+    print(f"  llmradar check    {PROMPT_ID} --db {DB_PATH} --window 1")
 
 
 if __name__ == "__main__":

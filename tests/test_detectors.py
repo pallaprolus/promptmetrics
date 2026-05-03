@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from promptdrift.detectors import detect_cost_drift, detect_latency_drift
-from promptdrift.models import Baseline, Severity
+from llmradar.detectors import detect_cost_drift, detect_latency_drift
+from llmradar.models import Baseline, Severity
 
 
 def _baseline(samples: list[float], total_tokens_mean: float = 100.0) -> Baseline:

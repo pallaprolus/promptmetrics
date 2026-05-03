@@ -1,6 +1,6 @@
-from promptdrift.core import PromptDrift
-from promptdrift.decorator import track
-from promptdrift.models import (
+from llmradar.core import LLMRadar
+from llmradar.decorator import track
+from llmradar.models import (
     Baseline,
     DriftReport,
     DriftResult,
@@ -12,7 +12,7 @@ from promptdrift.models import (
 __version__ = "0.1.0"
 
 __all__ = [
-    "PromptDrift",
+    "LLMRadar",
     "track",
     "Trace",
     "Baseline",

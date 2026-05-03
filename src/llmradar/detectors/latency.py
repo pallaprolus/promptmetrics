@@ -5,7 +5,7 @@ from collections.abc import Sequence
 import numpy as np
 from scipy import stats
 
-from promptdrift.models import Baseline, DriftResult, DriftType, Severity
+from llmradar.models import Baseline, DriftResult, DriftType, Severity
 
 # Two thresholds give us OK / WARNING / DRIFTED. The defaults match
 # the spec: 30% drift on p95 latency.

@@ -7,9 +7,9 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from promptdrift import __version__
-from promptdrift.core import InsufficientDataError, PromptDrift
-from promptdrift.models import DriftReport, Severity
+from llmradar import __version__
+from llmradar.core import InsufficientDataError, LLMRadar
+from llmradar.models import DriftReport, Severity
 
 app = typer.Typer(
     add_completion=False,
@@ -28,14 +28,14 @@ _SEVERITY_STYLE = {
 
 DbOption = Annotated[
     Path | None,
-    typer.Option("--db", help="Path to SQLite DB. Defaults to ~/.promptdrift/promptdrift.db."),
+    typer.Option("--db", help="Path to SQLite DB. Defaults to ~/.llmradar/llmradar.db."),
 ]
 
 
 @app.command()
 def version() -> None:
-    """Print the installed promptdrift version."""
-    console.print(f"promptdrift {__version__}")
+    """Print the installed llmradar version."""
+    console.print(f"llmradar {__version__}")
 
 
 @app.command()
@@ -46,7 +46,7 @@ def baseline(
     db: DbOption = None,
 ) -> None:
     """Capture a baseline from historical traces."""
-    with PromptDrift(db) as pd:
+    with LLMRadar(db) as pd:
         try:
             b = pd.capture_baseline(prompt_id, window_hours=window, min_samples=min_samples)
         except InsufficientDataError as e:
@@ -75,7 +75,7 @@ def check(
     db: DbOption = None,
 ) -> None:
     """Compare the recent window to the active baseline."""
-    with PromptDrift(db) as pd:
+    with LLMRadar(db) as pd:
         try:
             report = pd.check_drift(prompt_id, window_hours=window)
         except InsufficientDataError as e:
@@ -90,7 +90,7 @@ def check(
 @app.command(name="list")
 def list_cmd(db: DbOption = None) -> None:
     """List prompt_ids with recorded traces."""
-    with PromptDrift(db) as pd:
+    with LLMRadar(db) as pd:
         ids = pd.list_prompts()
     if not ids:
         console.print("[dim]no prompts recorded yet[/dim]")

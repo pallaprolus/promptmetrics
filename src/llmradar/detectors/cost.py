@@ -4,7 +4,7 @@ from collections.abc import Sequence
 
 import numpy as np
 
-from promptdrift.models import Baseline, DriftResult, DriftType, Severity
+from llmradar.models import Baseline, DriftResult, DriftType, Severity
 
 DEFAULT_TOKEN_RATIO_WARNING = 1.15
 DEFAULT_TOKEN_RATIO_DRIFTED = 1.30

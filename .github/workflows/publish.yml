@@ -7,7 +7,7 @@ name: Publish to PyPI
 # Prerequisite: configure a Trusted Publisher on PyPI for this
 # project pointing at:
 #   owner: pallaprolus
-#   repo:  promptdrift
+#   repo:  llmradar
 #   workflow filename: publish.yml
 #   environment: pypi
 
@@ -73,7 +73,7 @@ jobs:
     # manual approval gate before each release.
     environment:
       name: pypi
-      url: https://pypi.org/p/promptdrift
+      url: https://pypi.org/p/llmradar
     permissions:
       # OIDC token exchange with PyPI requires id-token: write.
       # No PYPI_API_TOKEN secret is used or needed.
