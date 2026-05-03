@@ -5,9 +5,9 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from llmradar.models import Baseline, Trace
+from promptmetrics.models import Baseline, Trace
 
-DEFAULT_DB_PATH = Path.home() / ".llmradar" / "llmradar.db"
+DEFAULT_DB_PATH = Path.home() / ".promptmetrics" / "promptmetrics.db"
 
 
 SCHEMA = """

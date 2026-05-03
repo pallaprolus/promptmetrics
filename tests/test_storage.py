@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from llmradar.models import Baseline
+from promptmetrics.models import Baseline
 from tests.conftest import make_trace
 
 

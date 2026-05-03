@@ -1,13 +1,13 @@
-# llmradar
+# promptmetrics
 
 **Production radar for LLM apps.** Capture a baseline of live traffic, get alerted when latency, cost, or behavior drifts.
 
-`llmradar` records every LLM call to a local SQLite database, computes a statistical fingerprint of "what good looked like at deploy time," and tells you when the recent window has drifted. Single file, pip-installable, no account, no SaaS bill.
+`promptmetrics` records every LLM call to a local SQLite database, computes a statistical fingerprint of "what good looked like at deploy time," and tells you when the recent window has drifted. Single file, pip-installable, no account, no SaaS bill.
 
 ## Install
 
 ```bash
-pip install llmradar
+pip install promptmetrics
 ```
 
 Requires Python 3.10+.
@@ -18,7 +18,7 @@ Requires Python 3.10+.
 
 ```python
 from openai import OpenAI
-from llmradar import track
+from promptmetrics import track
 
 client = OpenAI()
 
@@ -30,12 +30,12 @@ def summarize(text: str):
     )
 ```
 
-That's it. Every call is appended to `~/.llmradar/llmradar.db` with input, output, latency, and token counts. The decorator never raises if storage fails — your app keeps running.
+That's it. Every call is appended to `~/.promptmetrics/promptmetrics.db` with input, output, latency, and token counts. The decorator never raises if storage fails — your app keeps running.
 
 ### 2. Capture a baseline once you have history
 
 ```bash
-llmradar baseline summarize_v1 --window 168
+promptmetrics baseline summarize_v1 --window 168
 ```
 
 Summarises the last 7 days of traces (mean / p50 / p95 / p99 latency, mean tokens) and stores them as the active baseline.
@@ -43,7 +43,7 @@ Summarises the last 7 days of traces (mean / p50 / p95 / p99 latency, mean token
 ### 3. Check for drift
 
 ```bash
-llmradar check summarize_v1 --window 1
+promptmetrics check summarize_v1 --window 1
 ```
 
 Compares the most recent hour against the baseline and prints a report. Exits non-zero on `DRIFTED` so it composes with cron, CI, and shell pipelines.
@@ -51,11 +51,11 @@ Compares the most recent hour against the baseline and prints a report. Exits no
 ### Try it without an LLM
 
 ```bash
-git clone https://github.com/pallaprolus/llmradar && cd llmradar
+git clone https://github.com/pallaprolus/promptmetrics && cd promptmetrics
 pip install -e .
 python demo.py
-llmradar baseline demo --db ./demo.db --window 24 --min-samples 100
-llmradar check    demo --db ./demo.db --window 1
+promptmetrics baseline demo --db ./demo.db --window 24 --min-samples 100
+promptmetrics check    demo --db ./demo.db --window 1
 ```
 
 The `demo.py` script seeds 300 healthy traces and 60 deliberately drifted ones so you can see a real `DRIFTED` report on your first run.
@@ -72,9 +72,9 @@ The KS test only fires when the recent window is **slower** than the baseline �
 ## Programmatic API
 
 ```python
-from llmradar import LLMRadar
+from promptmetrics import PromptMetrics
 
-with LLMRadar() as r:
+with PromptMetrics() as r:
     baseline = r.capture_baseline("summarize_v1", window_hours=168)
     report = r.check_drift("summarize_v1", window_hours=1)
     print(report.severity)
@@ -84,7 +84,7 @@ with LLMRadar() as r:
 
 ## Custom token / output extractors
 
-If your call returns something `llmradar` can't introspect, pass extractors:
+If your call returns something `promptmetrics` can't introspect, pass extractors:
 
 ```python
 @track(

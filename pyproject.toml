@@ -3,13 +3,13 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "llmradar"
+name = "promptmetrics"
 version = "0.1.0"
 description = "Production radar for LLM apps — capture a baseline, detect when latency, cost, or behavior drifts."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
-authors = [{ name = "llmradar contributors" }]
+authors = [{ name = "promptmetrics contributors" }]
 keywords = ["llm", "observability", "drift", "monitoring", "openai", "anthropic"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -37,14 +37,14 @@ dev = [
 ]
 
 [project.scripts]
-llmradar = "llmradar.cli:app"
+promptmetrics = "promptmetrics.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/pallaprolus/llmradar"
-Issues = "https://github.com/pallaprolus/llmradar/issues"
+Homepage = "https://github.com/pallaprolus/promptmetrics"
+Issues = "https://github.com/pallaprolus/promptmetrics/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/llmradar"]
+packages = ["src/promptmetrics"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -6,8 +6,8 @@ import time
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from llmradar.models import Trace
-from llmradar.storage import Storage
+from promptmetrics.models import Trace
+from promptmetrics.storage import Storage
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ def track(
                 )
                 _get_storage().insert_trace(trace)
             except Exception:
-                logger.exception("llmradar: failed to record trace")
+                logger.exception("promptmetrics: failed to record trace")
             return result
 
         return wrapper  # type: ignore[return-value]

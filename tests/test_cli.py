@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typer.testing import CliRunner
 
-from llmradar.cli import app
-from llmradar.storage import Storage
+from promptmetrics.cli import app
+from promptmetrics.storage import Storage
 from tests.conftest import seed_normal_traces
 
 runner = CliRunner()
@@ -12,7 +12,7 @@ runner = CliRunner()
 def test_version():
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
-    assert "llmradar" in result.stdout
+    assert "promptmetrics" in result.stdout
 
 
 def test_baseline_then_check_clean(tmp_path):

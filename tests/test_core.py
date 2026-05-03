@@ -3,8 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from llmradar.core import InsufficientDataError
-from llmradar.models import Severity
+from promptmetrics.core import InsufficientDataError
+from promptmetrics.models import Severity
 from tests.conftest import seed_normal_traces
 
 
